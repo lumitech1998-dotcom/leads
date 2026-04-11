@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Deal Platform</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+    }
+    .top {
+      background: black;
+      color: white;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    .locked {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="top">
+  🔥 Deal Platform | Earn Points & Rewards
+</div>
+
+<h2>Post Your Deal</h2>
+
+<input id="title" placeholder="Deal Title"><br><br>
+<input id="desc" placeholder="Description"><br><br>
+<input id="value" placeholder="Deal Value"><br><br>
+
+<button onclick="postDeal()">Post Deal</button>
+
+<h3>Deals</h3>
+<div id="deals"></div>
+
+<script>
+let deals = [];
+let points = 0;
+
+function postDeal() {
+  let title = document.getElementById("title").value;
+  let desc = document.getElementById("desc").value;
+  let value = parseInt(document.getElementById("value").value);
+
+  let expiry = null;
+
+  if (value > 200000) {
+    let d = new Date();
+    d.setDate(d.getDate() + 7);
+    expiry = d;
+  }
+
+  let deal = {
+    title,
+    desc,
+    value,
+    expiry,
+    enquiries: 0,
+    locked: false
+  };
+
+  deals.push(deal);
+  showDeals();
+}
+
+function enquiry(index) {
+  let deal = deals[index];
+
+  if (deal.locked) {
+    alert("Deal Locked! Subscription Required");
+    return;
+  }
+
+  deal.enquiries++;
+
+  if (deal.enquiries >= 10) {
+    deal.locked = true;
+  }
+
+  points += 10;
+
+  showDeals();
+}
+
+function getTimeLeft(expiry) {
+  let now = new Date();
+  let diff = new Date(expiry) - now;
+
+  if (diff <= 0) return "Expired";
+
+  let days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  let hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+
+  return days + "d " + hours + "h left";
+}
+
+function showDeals() {
+  let box = document.getElementById("deals");
+  box.innerHTML = "<h4>Points: " + points + "</h4>";
+
+  let now = new Date();
+
+  deals.forEach((d, i) => {
+    if (!d.expiry || new Date(d.expiry) > now) {
+      let div = document.createElement("div");
+      div.className = "card";
+
+      let timeText = d.expiry ? getTimeLeft(d.expiry) : "No limit";
+
+      div.innerHTML = `
+        <b>${d.title}</b><br>
+        ₹${d.value}<br>
+        ⏳ ${timeText}<br>
+        ${
+          d.locked
+            ? '<span class="locked">LOCKED 🔒</span>'
+            : `<button onclick="enquiry(${i})">Enquiry</button>`
+        }
+        (Enquiries: ${d.enquiries})
+      `;
+
+      box.appendChild(div);
+    }
+  });
+}
+</script>
+
+</body>
+</html>
