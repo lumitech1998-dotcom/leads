@@ -1,72 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Deal Platform</title>
+  <title>Deals Platform</title>
   <style>
-    body {
-      font-family: Arial;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    .card {
-      background: white;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 8px;
-    }
-    .top {
-      background: black;
-      color: white;
-      padding: 10px;
-      margin-bottom: 20px;
-    }
-    .locked {
-      color: red;
-      font-weight: bold;
-    }
+    body { font-family: Arial; background:#f5f5f5; text-align:center; }
+    .box { background:white; padding:20px; margin:20px; border-radius:10px; }
+    button { padding:10px 20px; background:black; color:white; border:none; }
   </style>
 </head>
+
 <body>
 
-<div class="top">
-  🔥 Deal Platform | Earn Points & Rewards
+<h1>🔥 Smart Deals Marketplace</h1>
+
+<div class="box">
+  <h2>Post Deal</h2>
+  <input type="text" id="dealTitle" placeholder="Deal Title"><br><br>
+  <input type="number" id="dealAmount" placeholder="Deal Amount (₹)"><br><br>
+  <button onclick="postDeal()">Post Deal</button>
 </div>
 
-<h2>Post Your Deal</h2>
-
-<input id="title" placeholder="Deal Title"><br><br>
-<input id="desc" placeholder="Description"><br><br>
-<input id="value" placeholder="Deal Value"><br><br>
-
-<button onclick="postDeal()">Post Deal</button>
-
-<h3>Deals</h3>
-<div id="deals"></div>
+<div class="box">
+  <h2>Deals</h2>
+  <div id="deals"></div>
+</div>
 
 <script>
 let deals = [];
-let points = 0;
 
 function postDeal() {
-  let title = document.getElementById("title").value;
-  let desc = document.getElementById("desc").value;
-  let value = parseInt(document.getElementById("value").value);
+  let title = document.getElementById("dealTitle").value;
+  let amount = parseInt(document.getElementById("dealAmount").value);
 
-  let expiry = null;
-
-  if (value > 200000) {
-    let d = new Date();
-    d.setDate(d.getDate() + 7);
-    expiry = d;
+  if(title == "" || !amount) {
+    alert("Fill all fields");
+    return;
   }
 
   let deal = {
-    title,
-    desc,
-    value,
-    expiry,
+    title: title,
+    amount: amount,
     enquiries: 0,
-    locked: false
+    locked: false,
+    freeAccess: true,
+    createdAt: new Date().getTime()
   };
 
   deals.push(deal);
@@ -76,62 +53,61 @@ function postDeal() {
 function enquiry(index) {
   let deal = deals[index];
 
-  if (deal.locked) {
-    alert("Deal Locked! Subscription Required");
+  // 1️⃣ 1 week free access
+  let now = new Date().getTime();
+  let oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+  if(now - deal.createdAt > oneWeek) {
+    deal.freeAccess = false;
+  }
+
+  // 2️⃣ lock after 10 enquiries
+  if(deal.enquiries >= 10) {
+    deal.locked = true;
+  }
+
+  // 3️⃣ Big deal logic (>2 lakh)
+  if(deal.amount > 200000 && !deal.freeAccess) {
+    alert("🔒 Subscription Required for Big Deal");
+    return;
+  }
+
+  if(deal.locked) {
+    alert("🔒 Deal Locked");
     return;
   }
 
   deal.enquiries++;
-
-  if (deal.enquiries >= 10) {
-    deal.locked = true;
-  }
-
-  points += 10;
-
   showDeals();
 }
 
-function getTimeLeft(expiry) {
-  let now = new Date();
-  let diff = new Date(expiry) - now;
-
-  if (diff <= 0) return "Expired";
-
-  let days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  let hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-
-  return days + "d " + hours + "h left";
-}
-
 function showDeals() {
-  let box = document.getElementById("deals");
-  box.innerHTML = "<h4>Points: " + points + "</h4>";
-
-  let now = new Date();
+  let output = "";
 
   deals.forEach((d, i) => {
-    if (!d.expiry || new Date(d.expiry) > now) {
-      let div = document.createElement("div");
-      div.className = "card";
 
-      let timeText = d.expiry ? getTimeLeft(d.expiry) : "No limit";
+    let status = "";
 
-      div.innerHTML = `
-        <b>${d.title}</b><br>
-        ₹${d.value}<br>
-        ⏳ ${timeText}<br>
-        ${
-          d.locked
-            ? '<span class="locked">LOCKED 🔒</span>'
-            : `<button onclick="enquiry(${i})">Enquiry</button>`
-        }
-        (Enquiries: ${d.enquiries})
-      `;
-
-      box.appendChild(div);
+    if(d.amount > 200000) {
+      status += "💰 High Value Deal<br>";
     }
+
+    if(d.locked) {
+      status += "🔒 Locked<br>";
+    }
+
+    output += `
+      <div style="margin:10px;padding:10px;border:1px solid #ccc">
+        <b>${d.title}</b><br>
+        ₹${d.amount}<br>
+        Enquiries: ${d.enquiries}<br>
+        ${status}
+        <button onclick="enquiry(${i})">Enquire</button>
+      </div>
+    `;
   });
+
+  document.getElementById("deals").innerHTML = output;
 }
 </script>
 
