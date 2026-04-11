@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Deals Platform PRO</title>
+  <title>Pro Admin Deals Platform</title>
   <style>
     body { font-family: Arial; background:#f5f5f5; text-align:center; }
     .box { background:white; padding:20px; margin:20px; border-radius:10px; }
-    button { padding:10px 20px; background:black; color:white; border:none; }
+    button { padding:8px 15px; background:black; color:white; border:none; margin:3px; }
+    input { padding:8px; margin:5px; }
   </style>
 </head>
 
@@ -14,15 +15,16 @@
 <h1>🔥 Deals Marketplace PRO</h1>
 
 <div class="box">
-  <h2>Enter Your Name</h2>
-  <input type="text" id="username" placeholder="Your Name"><br><br>
-  <button onclick="saveUser()">Start</button>
+  <h2>Login</h2>
+  <input type="text" id="username" placeholder="Name"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button onclick="login()">Enter</button>
 </div>
 
 <div class="box">
   <h2>Post Deal</h2>
-  <input type="text" id="dealTitle" placeholder="Deal Title"><br><br>
-  <input type="number" id="dealAmount" placeholder="Deal Amount (₹)"><br><br>
+  <input type="text" id="dealTitle" placeholder="Deal Title"><br>
+  <input type="number" id="dealAmount" placeholder="Deal Amount (₹)"><br>
   <button onclick="postDeal()">Post Deal</button>
 </div>
 
@@ -31,19 +33,44 @@
   <div id="deals"></div>
 </div>
 
+<div class="box" id="adminPanel" style="display:none;">
+  <h2>👑 Admin Panel</h2>
+  <button onclick="showAll()">All Deals</button>
+  <button onclick="showBig()">💰 Big Deals (1Cr+)</button>
+  <div id="adminData"></div>
+</div>
+
 <script>
 let deals = JSON.parse(localStorage.getItem("deals")) || [];
-let user = localStorage.getItem("user") || "";
+let user = "";
+let isAdmin = false;
 
-function saveUser() {
+// 🔐 CHANGE THIS PASSWORD
+const ADMIN_PASSWORD = "1234";
+
+function login() {
   user = document.getElementById("username").value;
-  localStorage.setItem("user", user);
-  alert("Welcome " + user);
+  let pass = document.getElementById("password").value;
+
+  if(user == "") {
+    alert("Enter name");
+    return;
+  }
+
+  // Admin check
+  if(user.toLowerCase() == "admin" && pass == ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.getElementById("adminPanel").style.display = "block";
+    alert("👑 Admin Access Granted");
+    showAll();
+  } else {
+    alert("User Login Successful");
+  }
 }
 
 function postDeal() {
   if(user == "") {
-    alert("Enter your name first");
+    alert("Login first");
     return;
   }
 
@@ -59,8 +86,7 @@ function postDeal() {
     user: user,
     title: title,
     amount: amount,
-    enquiries: 0,
-    createdAt: new Date().getTime()
+    enquiries: 0
   };
 
   deals.push(deal);
@@ -69,24 +95,24 @@ function postDeal() {
 }
 
 function enquiry(index) {
-  let deal = deals[index];
+  deals[index].enquiries++;
 
-  deal.enquiries++;
-
-  // 🔥 TRACK BIG DEAL USERS
-  if(deal.amount >= 10000000) {
-    alert("🔥 Big Deal User Detected (1Cr+)");
-    console.log("BIG USER:", deal.user);
-  }
-
-  // 🔒 LOCK AFTER 10
-  if(deal.enquiries >= 10) {
-    alert("🔒 Subscription Required Now");
+  if(deals[index].enquiries >= 10) {
+    alert("🔒 Subscription Required");
     return;
   }
 
   localStorage.setItem("deals", JSON.stringify(deals));
   showDeals();
+}
+
+function deleteDeal(index) {
+  if(!isAdmin) return;
+
+  deals.splice(index, 1);
+  localStorage.setItem("deals", JSON.stringify(deals));
+  showDeals();
+  showAll();
 }
 
 function showDeals() {
@@ -105,6 +131,37 @@ function showDeals() {
   });
 
   document.getElementById("deals").innerHTML = output;
+}
+
+function showAll() {
+  let data = "";
+
+  deals.forEach((d, i) => {
+    data += `
+      <div style="border:1px solid black; margin:5px; padding:5px;">
+        👤 ${d.user} | 💰 ₹${d.amount} | 📊 ${d.enquiries}
+        <br><button onclick="deleteDeal(${i})">❌ Delete</button>
+      </div>
+    `;
+  });
+
+  document.getElementById("adminData").innerHTML = data;
+}
+
+function showBig() {
+  let data = "";
+
+  deals.forEach((d, i) => {
+    if(d.amount >= 10000000) {
+      data += `
+        <div style="border:2px solid red; margin:5px; padding:5px;">
+          🔥 BIG: ${d.user} | ₹${d.amount}
+        </div>
+      `;
+    }
+  });
+
+  document.getElementById("adminData").innerHTML = data;
 }
 
 showDeals();
