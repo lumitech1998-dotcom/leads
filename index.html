@@ -1,170 +1,125 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Pro Admin Deals Platform</title>
+  <title>Deals Platform</title>
   <style>
-    body { font-family: Arial; background:#f5f5f5; text-align:center; }
-    .box { background:white; padding:20px; margin:20px; border-radius:10px; }
-    button { padding:8px 15px; background:black; color:white; border:none; margin:3px; }
+    body { font-family: Arial; text-align:center; }
+    #content, #chatBox { display:none; margin-top:20px; }
+    button { padding:10px; margin:5px; }
     input { padding:8px; margin:5px; }
   </style>
 </head>
 
 <body>
 
-<h1>🔥 Deals Marketplace PRO</h1>
+<h1>🔥 Deals Platform</h1>
 
-<div class="box">
-  <h2>Login</h2>
-  <input type="text" id="username" placeholder="Name"><br>
-  <input type="password" id="password" placeholder="Password"><br>
-  <button onclick="login()">Enter</button>
+<!-- LOCK SCREEN -->
+<div id="lock">
+  <h2>🔒 Pay ₹1 to Unlock Leads</h2>
+  <button onclick="upiPay()">📲 Pay Now</button><br>
+  <input type="text" id="txn" placeholder="Enter Transaction ID">
+  <button onclick="unlock()">Submit</button>
 </div>
 
-<div class="box">
-  <h2>Post Deal</h2>
-  <input type="text" id="dealTitle" placeholder="Deal Title"><br>
-  <input type="number" id="dealAmount" placeholder="Deal Amount (₹)"><br>
-  <button onclick="postDeal()">Post Deal</button>
-</div>
+<!-- MAIN CONTENT -->
+<div id="content">
+  <h2>🔥 Premium Leads</h2>
 
-<div class="box">
-  <h2>Deals</h2>
-  <div id="deals"></div>
-</div>
+  <div onclick="openLead()">👉 Solar Project - 50KW</div>
+  <div onclick="openLead()">👉 Battery Order - 200Ah</div>
+  <div onclick="openLead()">👉 Investor Required - 1CR</div>
 
-<div class="box" id="adminPanel" style="display:none;">
-  <h2>👑 Admin Panel</h2>
-  <button onclick="showAll()">All Deals</button>
-  <button onclick="showBig()">💰 Big Deals (1Cr+)</button>
-  <div id="adminData"></div>
+  <p id="limitMsg"></p>
+
+  <!-- CHAT -->
+  <div id="chatBox">
+    <h3>💬 Chat</h3>
+    <div id="messages"></div>
+    <input type="text" id="msg" placeholder="Type message">
+    <button onclick="sendMsg()">Send</button>
+  </div>
 </div>
 
 <script>
-let deals = JSON.parse(localStorage.getItem("deals")) || [];
-let user = "";
-let isAdmin = false;
 
-// 🔐 CHANGE THIS PASSWORD
-const ADMIN_PASSWORD = "1234";
+// UPI PAYMENT
+function upiPay(){
+  window.location.href="upi://pay?pa=yourupi@okaxis&pn=Deals&am=1&cu=INR";
+}
 
-function login() {
-  user = document.getElementById("username").value;
-  let pass = document.getElementById("password").value;
-
-  if(user == "") {
-    alert("Enter name");
-    return;
-  }
-
-  // Admin check
-  if(user.toLowerCase() == "admin" && pass == ADMIN_PASSWORD) {
-    isAdmin = true;
-    document.getElementById("adminPanel").style.display = "block";
-    alert("👑 Admin Access Granted");
-    showAll();
+// UNLOCK SYSTEM
+function unlock(){
+  let txn = document.getElementById("txn").value;
+  if(txn.length > 5){
+    document.getElementById("lock").style.display="none";
+    document.getElementById("content").style.display="block";
+    localStorage.setItem("paid","yes");
+    localStorage.setItem("lastLogin", Date.now());
   } else {
-    alert("User Login Successful");
+    alert("Enter valid Transaction ID");
   }
 }
 
-function postDeal() {
-  if(user == "") {
-    alert("Login first");
-    return;
+// AUTO LOGIN CHECK
+if(localStorage.getItem("paid") === "yes"){
+  document.getElementById("lock").style.display="none";
+  document.getElementById("content").style.display="block";
+}
+
+// LEADS LIMIT
+let leadsUsed = localStorage.getItem("leads") || 0;
+
+function openLead(){
+  leadsUsed++;
+  localStorage.setItem("leads", leadsUsed);
+
+  if(leadsUsed >= 5){
+    document.getElementById("limitMsg").innerText="⚠️ Limit reached. Upgrade required.";
   }
 
-  let title = document.getElementById("dealTitle").value;
-  let amount = parseInt(document.getElementById("dealAmount").value);
+  document.getElementById("chatBox").style.display="block";
+}
 
-  if(title == "" || !amount) {
-    alert("Fill all fields");
-    return;
+// CHAT SYSTEM
+function sendMsg(){
+  let msg = document.getElementById("msg").value;
+  let box = document.getElementById("messages");
+  box.innerHTML += "<p>🧑: "+msg+"</p>";
+  document.getElementById("msg").value="";
+}
+
+// INACTIVE SYSTEM
+let last = localStorage.getItem("lastLogin");
+let now = Date.now();
+
+if(last){
+  let diff = (now - last) / (1000*60*60*24);
+
+  if(diff > 7 && !localStorage.getItem("extended")){
+    alert("⚠️ 3 Days Extension Given");
+    localStorage.setItem("extended","yes");
   }
 
-  let deal = {
-    user: user,
-    title: title,
-    amount: amount,
-    enquiries: 0
-  };
-
-  deals.push(deal);
-  localStorage.setItem("deals", JSON.stringify(deals));
-  showDeals();
-}
-
-function enquiry(index) {
-  deals[index].enquiries++;
-
-  if(deals[index].enquiries >= 10) {
-    alert("🔒 Subscription Required");
-    return;
+  if(diff > 10 && localStorage.getItem("extended")){
+    document.body.innerHTML="<h1>❌ Account Blocked</h1>";
   }
-
-  localStorage.setItem("deals", JSON.stringify(deals));
-  showDeals();
 }
 
-function deleteDeal(index) {
-  if(!isAdmin) return;
-
-  deals.splice(index, 1);
-  localStorage.setItem("deals", JSON.stringify(deals));
-  showDeals();
-  showAll();
+// NOTIFICATION
+if(Notification.permission !== "granted"){
+  Notification.requestPermission();
 }
 
-function showDeals() {
-  let output = "";
-
-  deals.forEach((d, i) => {
-    output += `
-      <div style="margin:10px;padding:10px;border:1px solid #ccc">
-        <b>${d.title}</b><br>
-        ₹${d.amount}<br>
-        By: ${d.user}<br>
-        Enquiries: ${d.enquiries}<br>
-        <button onclick="enquiry(${i})">Enquire</button>
-      </div>
-    `;
-  });
-
-  document.getElementById("deals").innerHTML = output;
+if(last){
+  let diff = (now - last) / (1000*60*60*24);
+  if(diff > 7){
+    new Notification("⚡ Come Back!", {
+      body:"Your account inactive. Login now!"
+    });
+  }
 }
 
-function showAll() {
-  let data = "";
-
-  deals.forEach((d, i) => {
-    data += `
-      <div style="border:1px solid black; margin:5px; padding:5px;">
-        👤 ${d.user} | 💰 ₹${d.amount} | 📊 ${d.enquiries}
-        <br><button onclick="deleteDeal(${i})">❌ Delete</button>
-      </div>
-    `;
-  });
-
-  document.getElementById("adminData").innerHTML = data;
-}
-
-function showBig() {
-  let data = "";
-
-  deals.forEach((d, i) => {
-    if(d.amount >= 10000000) {
-      data += `
-        <div style="border:2px solid red; margin:5px; padding:5px;">
-          🔥 BIG: ${d.user} | ₹${d.amount}
-        </div>
-      `;
-    }
-  });
-
-  document.getElementById("adminData").innerHTML = data;
-}
-
-showDeals();
 </script>
 
 </body>
